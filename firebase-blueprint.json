@@ -1,0 +1,514 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Contextual memory and user preferences stored per user without PII.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "workHours": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "focusPreferences": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "ongoingProjects": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "learnedContext": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "role",
+        "workHours",
+        "focusPreferences",
+        "ongoingProjects",
+        "learnedContext",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated private PII record for authenticated user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "TaskItem": {
+      "title": "TaskItem",
+      "description": "Actionable user task with priority and status.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1500
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["todo", "in_progress", "done"]
+        },
+        "dueDate": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 20
+        },
+        "source": {
+          "type": "string",
+          "enum": ["manual", "email", "research", "agent"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "title",
+        "notes",
+        "priority",
+        "status",
+        "dueDate",
+        "source",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ResearchBrief": {
+      "title": "ResearchBrief",
+      "description": "Autonomous research synthesis brief with cited sources.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 6000
+        },
+        "keyFindings": {
+          "type": "array"
+        },
+        "sources": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "query",
+        "summary",
+        "keyFindings",
+        "sources",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ScheduleEvent": {
+      "title": "ScheduleEvent",
+      "description": "Calendar time block or scheduled event.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "date": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "startTime": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^\\d{2}:\\d{2}$"
+        },
+        "endTime": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^\\d{2}:\\d{2}$"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["deep_work", "meeting", "personal", "review"]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "title",
+        "date",
+        "startTime",
+        "endTime",
+        "category",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "NoteItem": {
+      "title": "NoteItem",
+      "description": "Searchable personal knowledge base note.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8000
+        },
+        "topic": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "title",
+        "content",
+        "topic",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DecisionAnalysis": {
+      "title": "DecisionAnalysis",
+      "description": "Structured pros and cons decision helper record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "pros": {
+          "type": "array"
+        },
+        "cons": {
+          "type": "array"
+        },
+        "recommendation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "decided"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "question",
+        "pros",
+        "cons",
+        "recommendation",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "InboxTriageItem": {
+      "title": "InboxTriageItem",
+      "description": "Triaged email or message summary and suggested reply.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "sender": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 160
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "originalSnippet": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "suggestedReply": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 3000
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["urgent", "normal", "low"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "archived"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "sender",
+        "subject",
+        "originalSnippet",
+        "summary",
+        "suggestedReply",
+        "priority",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ToolIntegration": {
+      "title": "ToolIntegration",
+      "description": "Connected external calendar, project management, or webhook tool.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "toolName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "toolType": {
+          "type": "string",
+          "enum": ["calendar", "project_management", "email", "webhook"]
+        },
+        "endpointUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "syncEnabled": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "toolName",
+        "toolType",
+        "endpointUrl",
+        "syncEnabled",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User contextual memory and profile preferences."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII record for authenticated user."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/TaskItem" },
+      "description": "User tasks."
+    },
+    "/users/{userId}/research/{briefId}": {
+      "schema": { "$ref": "#/entities/ResearchBrief" },
+      "description": "Autonomous research briefs."
+    },
+    "/users/{userId}/events/{eventId}": {
+      "schema": { "$ref": "#/entities/ScheduleEvent" },
+      "description": "Schedule events and focus blocks."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/NoteItem" },
+      "description": "Searchable personal knowledge notes."
+    },
+    "/users/{userId}/decisions/{decisionId}": {
+      "schema": { "$ref": "#/entities/DecisionAnalysis" },
+      "description": "Decision pros and cons analyses."
+    },
+    "/users/{userId}/triage/{triageId}": {
+      "schema": { "$ref": "#/entities/InboxTriageItem" },
+      "description": "Email and message triage records."
+    },
+    "/users/{userId}/integrations/{integrationId}": {
+      "schema": { "$ref": "#/entities/ToolIntegration" },
+      "description": "External calendar and project tool connections."
+    }
+  }
+}

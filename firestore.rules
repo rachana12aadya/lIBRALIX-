@@ -1,0 +1,389 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function hasUserParent(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidStringList(listVal, maxItems, maxItemLen) {
+      return listVal is list
+        && listVal.size() <= maxItems
+        && (listVal.size() == 0 || (listVal[0] is string && listVal[0].size() <= maxItemLen));
+    }
+
+    // Validation Blueprints
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'role', 'workHours', 'focusPreferences', 'ongoingProjects', 'learnedContext', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'role', 'workHours', 'focusPreferences', 'ongoingProjects', 'learnedContext', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.displayName, 0, 120)
+        && isValidString(data.role, 0, 120)
+        && isValidString(data.workHours, 0, 80)
+        && isValidString(data.focusPreferences, 0, 500)
+        && isValidString(data.ongoingProjects, 0, 1000)
+        && isValidString(data.learnedContext, 0, 1500)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.email, 3, 254)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTaskItem(data, userId) {
+      return data.keys().hasAll(['uid', 'title', 'notes', 'priority', 'status', 'dueDate', 'source', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'title', 'notes', 'priority', 'status', 'dueDate', 'source', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.title, 1, 200)
+        && isValidString(data.notes, 0, 1500)
+        && data.priority in ['high', 'medium', 'low']
+        && data.status in ['todo', 'in_progress', 'done']
+        && isValidString(data.dueDate, 0, 20)
+        && data.source in ['manual', 'email', 'research', 'agent']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidResearchBrief(data, userId) {
+      return data.keys().hasAll(['uid', 'query', 'summary', 'keyFindings', 'sources', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'query', 'summary', 'keyFindings', 'sources', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.query, 1, 500)
+        && isValidString(data.summary, 1, 6000)
+        && isValidStringList(data.keyFindings, 10, 400)
+        && isValidStringList(data.sources, 15, 500)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidScheduleEvent(data, userId) {
+      return data.keys().hasAll(['uid', 'title', 'date', 'startTime', 'endTime', 'category', 'notes', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'title', 'date', 'startTime', 'endTime', 'category', 'notes', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.title, 1, 200)
+        && isValidString(data.date, 10, 10)
+        && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && isValidString(data.startTime, 5, 5)
+        && data.startTime.matches('^\\d{2}:\\d{2}$')
+        && isValidString(data.endTime, 5, 5)
+        && data.endTime.matches('^\\d{2}:\\d{2}$')
+        && data.category in ['deep_work', 'meeting', 'personal', 'review']
+        && isValidString(data.notes, 0, 1000)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidNoteItem(data, userId) {
+      return data.keys().hasAll(['uid', 'title', 'content', 'topic', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'title', 'content', 'topic', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.title, 1, 200)
+        && isValidString(data.content, 1, 8000)
+        && isValidString(data.topic, 0, 80)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDecisionAnalysis(data, userId) {
+      return data.keys().hasAll(['uid', 'question', 'pros', 'cons', 'recommendation', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'question', 'pros', 'cons', 'recommendation', 'status', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.question, 1, 400)
+        && isValidStringList(data.pros, 12, 400)
+        && isValidStringList(data.cons, 12, 400)
+        && isValidString(data.recommendation, 1, 3000)
+        && data.status in ['open', 'decided']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidInboxTriageItem(data, userId) {
+      return data.keys().hasAll(['uid', 'sender', 'subject', 'originalSnippet', 'summary', 'suggestedReply', 'priority', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'sender', 'subject', 'originalSnippet', 'summary', 'suggestedReply', 'priority', 'status', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.sender, 0, 160)
+        && isValidString(data.subject, 1, 200)
+        && isValidString(data.originalSnippet, 1, 4000)
+        && isValidString(data.summary, 1, 2000)
+        && isValidString(data.suggestedReply, 0, 3000)
+        && data.priority in ['urgent', 'normal', 'low']
+        && data.status in ['open', 'archived']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidToolIntegration(data, userId) {
+      return data.keys().hasAll(['uid', 'toolName', 'toolType', 'endpointUrl', 'syncEnabled', 'notes', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'toolName', 'toolType', 'endpointUrl', 'syncEnabled', 'notes', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isValidString(data.toolName, 1, 100)
+        && data.toolType in ['calendar', 'project_management', 'email', 'webhook']
+        && isValidString(data.endpointUrl, 0, 500)
+        && data.syncEnabled is bool
+        && isValidString(data.notes, 0, 500)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // User Profile (Contextual Memory)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'workHours', 'focusPreferences', 'ongoingProjects', 'learnedContext', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['learnedContext', 'updatedAt'])
+        );
+      allow delete: if isValidId(userId) && isOwner(userId);
+
+      // Isolated PII
+      match /private/{docId} {
+        allow get: if isValidId(userId) && isValidId(docId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(docId)
+          && isOwner(userId)
+          && isValidUserPrivateInfo(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId)
+          && isValidId(docId)
+          && isOwner(userId)
+          && isValidUserPrivateInfo(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(docId) && isOwner(userId);
+      }
+
+      // Tasks
+      match /tasks/{taskId} {
+        allow get: if isValidId(userId) && isValidId(taskId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(taskId)
+          && isOwner(userId)
+          && isValidTaskItem(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId);
+        allow update: if isValidId(userId)
+          && isValidId(taskId)
+          && isOwner(userId)
+          && isValidTaskItem(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId)
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly(['priority', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly(['title', 'notes', 'priority', 'status', 'dueDate', 'updatedAt'])
+          );
+        allow delete: if isValidId(userId) && isValidId(taskId) && isOwner(userId);
+      }
+
+      // Autonomous Research Briefs
+      match /research/{briefId} {
+        allow get: if isValidId(userId) && isValidId(briefId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(briefId)
+          && isOwner(userId)
+          && isValidResearchBrief(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId);
+        allow update: if isValidId(userId)
+          && isValidId(briefId)
+          && isOwner(userId)
+          && isValidResearchBrief(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['summary', 'keyFindings', 'sources', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(briefId) && isOwner(userId);
+      }
+
+      // Schedule Events
+      match /events/{eventId} {
+        allow get: if isValidId(userId) && isValidId(eventId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(eventId)
+          && isOwner(userId)
+          && isValidScheduleEvent(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId);
+        allow update: if isValidId(userId)
+          && isValidId(eventId)
+          && isOwner(userId)
+          && isValidScheduleEvent(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'date', 'startTime', 'endTime', 'category', 'notes', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(eventId) && isOwner(userId);
+      }
+
+      // Personal Knowledge Notes
+      match /notes/{noteId} {
+        allow get: if isValidId(userId) && isValidId(noteId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(noteId)
+          && isOwner(userId)
+          && isValidNoteItem(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId);
+        allow update: if isValidId(userId)
+          && isValidId(noteId)
+          && isOwner(userId)
+          && isValidNoteItem(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'topic', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(noteId) && isOwner(userId);
+      }
+
+      // Decisions (Pros & Cons) with Terminal State Locking
+      match /decisions/{decisionId} {
+        allow get: if isValidId(userId) && isValidId(decisionId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(decisionId)
+          && isOwner(userId)
+          && isValidDecisionAnalysis(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId);
+        allow update: if isValidId(userId)
+          && isValidId(decisionId)
+          && isOwner(userId)
+          && isValidDecisionAnalysis(incoming(), userId)
+          && existing().status != 'decided'
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(decisionId) && isOwner(userId);
+      }
+
+      // Inbox Triage with Terminal State Locking
+      match /triage/{triageId} {
+        allow get: if isValidId(userId) && isValidId(triageId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(triageId)
+          && isOwner(userId)
+          && isValidInboxTriageItem(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId);
+        allow update: if isValidId(userId)
+          && isValidId(triageId)
+          && isOwner(userId)
+          && isValidInboxTriageItem(incoming(), userId)
+          && existing().status != 'archived'
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId)
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly(['suggestedReply', 'updatedAt'])
+          );
+        allow delete: if isValidId(userId) && isValidId(triageId) && isOwner(userId);
+      }
+
+      // External Tool Integrations
+      match /integrations/{integrationId} {
+        allow get: if isValidId(userId) && isValidId(integrationId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(integrationId)
+          && isOwner(userId)
+          && isValidToolIntegration(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId);
+        allow update: if isValidId(userId)
+          && isValidId(integrationId)
+          && isOwner(userId)
+          && isValidToolIntegration(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && hasUserParent(userId)
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['syncEnabled', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly(['toolName', 'toolType', 'endpointUrl', 'syncEnabled', 'notes', 'updatedAt'])
+          );
+        allow delete: if isValidId(userId) && isValidId(integrationId) && isOwner(userId);
+      }
+    }
+  }
+}

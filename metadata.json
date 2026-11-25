@@ -1,0 +1,6 @@
+{
+  "name": "libralix",
+  "description": "Personal productivity and autonomous research assistant agent powered by Google Sign-In, Firestore, and Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
